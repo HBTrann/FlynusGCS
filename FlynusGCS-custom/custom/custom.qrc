@@ -7,10 +7,9 @@
         <file alias="QGCLogoWhite">res/Images/FlynusLogoWhite.svg</file>
         <file alias="qgroundcontrol.ico">res/icons/flynus_gcs.ico</file>
     </qresource>
-    <!-- QML overrides: centered compass + telemetry, battery/time bar, left indicator panel, mode-only top bar -->
+    <!-- QML overrides: centered compass + telemetry, left status panel with flight-time ring, mode-only top bar -->
     <qresource prefix="/Custom/qml/QGroundControl/FlyView">
         <file alias="FlyViewBottomRightRowLayout.qml">res/qml/FlyView/FlyViewBottomRightRowLayout.qml</file>
-        <file alias="FlyViewCustomLayer.qml">res/qml/FlyView/FlyViewCustomLayer.qml</file>
         <file alias="FlyViewWidgetLayer.qml">res/qml/FlyView/FlyViewWidgetLayer.qml</file>
     </qresource>
     <qresource prefix="/Custom/qml/QGroundControl/Toolbar">

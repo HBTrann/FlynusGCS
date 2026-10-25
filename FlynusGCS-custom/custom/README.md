@@ -6,7 +6,7 @@ This folder rebrands QGroundControl **5.1 stable** (branch `Stable_V5.1`, i.e. v
 |---|---|
 | App label (Android launcher) | Flynus GCS |
 | Internal app / target name | `FlynusGCS` (CMake targets can't contain spaces) |
-| Android package id | `com.hypmotion.flynusgcs` (installs alongside stock QGC) |
+| Android package id | `com.flynus.gcs` (installs alongside stock QGC) |
 | Default theme | White (light) on every platform; users can still switch in *Application Settings → General → Color Scheme* |
 | Accent colors | Flynus green `#223B25` (buttons, highlights, borders), Flynus red `#BC0814` (warnings, map indicators) |
 | Logo | Flynus "F" mark replaces the QGC logo (toolbar button, settings icon, GCS position marker on the map) |

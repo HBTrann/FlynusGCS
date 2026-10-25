@@ -16,7 +16,7 @@ import QGroundControl.Viewer3D
 import QGroundControl.Toolbar
 
 // This is the ui overlay layer for the widgets/tools for Fly View
-// Flynus GCS override: a status/indicator panel (Ready, battery, GPS, RC, telemetry, ...)
+// Flynus GCS override: a status/indicator panel (Ready, flight-time ring, battery, GPS, RC, telemetry, ...)
 // sits at the top-left; the Takeoff/Return tool strip is placed below it in the same
 // column, so extra tool strip buttons never move the status panel.
 Item {
@@ -150,15 +150,78 @@ Item {
         }
     }
 
+    // ---- Flynus: battery / remaining flight time ring -----------------------
+    // Remaining time comes from the flight controller (BATTERY_STATUS.time_remaining)
+    // when available; otherwise it is estimated from the discharge rate since arming
+    // (shown with "~"). Without enough data the ring shows the battery percentage.
+    property var  _battery:          _activeVehicle && _activeVehicle.batteries.count > 0 ? _activeVehicle.batteries.get(0) : null
+    property real _battPercent:      _battery ? _battery.percentRemaining.rawValue : NaN
+    property real _fcTimeRemaining:  _battery ? _battery.timeRemaining.rawValue : NaN   // seconds
+    property bool _hasBattPercent:   !isNaN(_battPercent)
+    property real _armPercent:       NaN
+    property real _armTimeMs:        0
+    property real _estTimeRemaining: NaN
+    property real _remainingSec:     !isNaN(_fcTimeRemaining) && _fcTimeRemaining > 0 ? _fcTimeRemaining : _estTimeRemaining
+    property bool _timeIsEstimate:   isNaN(_fcTimeRemaining) || _fcTimeRemaining <= 0
+
+    function _battColor() {
+        if (_battPercent <= 15) return "#BC0814"
+        if (_battPercent <= 30) return "#F5B700"
+        return "#2FBF4A"
+    }
+
+    function _resetFlightTimeEstimate() {
+        _armPercent = NaN
+        _armTimeMs = 0
+        _estTimeRemaining = NaN
+    }
+
+    on_ActiveVehicleChanged: _resetFlightTimeEstimate()
+
+    Connections {
+        target:                 _activeVehicle
+        ignoreUnknownSignals:   true
+        function onArmedChanged(armed) {
+            if (armed && _hasBattPercent) {
+                _armPercent = _battPercent
+                _armTimeMs  = Date.now()
+                _estTimeRemaining = NaN
+            } else if (!armed) {
+                _resetFlightTimeEstimate()
+            }
+        }
+    }
+
+    Timer {
+        interval:   2000
+        repeat:     true
+        running:    _activeVehicle && _activeVehicle.armed && _hasBattPercent
+        onTriggered: {
+            if (isNaN(_armPercent)) {
+                _armPercent = _battPercent
+                _armTimeMs  = Date.now()
+                return
+            }
+            var used = _armPercent - _battPercent
+            var elapsedSec = (Date.now() - _armTimeMs) / 1000
+            // Need at least 2% used and 30 s of data for a usable rate
+            if (used >= 2 && elapsedSec >= 30) {
+                _estTimeRemaining = _battPercent * elapsedSec / used
+            }
+        }
+    }
+
     // ---- Flynus: status + indicator panel (top-left) -------------------------
     property real _indicatorHeight: ScreenTools.toolbarHeight * 0.7
+    // MainStatusIndicator reads/writes these from its parent context (normally FlyViewToolBar)
+    property bool  _communicationLost:  _activeVehicle ? _activeVehicle.vehicleLinkManager.communicationLost : false
+    property color _mainStatusBGColor:  QGroundControl.globalPalette.brandingPurple
 
     Rectangle {
         id:         statusPanel
         anchors.left:   parent.left
         anchors.top:    parent.top
-        // Small gap below the battery/time bar drawn by FlyViewCustomLayer under the toolbar
-        anchors.topMargin: ScreenTools.defaultFontPixelHeight * 0.3
+        anchors.topMargin: _toolsMargin
         width:      statusColumn.width + _toolsMargin * 2
         height:     statusColumn.height + _toolsMargin * 2
         radius:     ScreenTools.defaultFontPixelWidth / 2
@@ -175,8 +238,91 @@ Item {
             spacing:    _toolsMargin
 
             // Ready / Not Ready / Armed / Disconnected (click for details, arm, connect)
-            MainStatusIndicator {
+            Item {
+                width:  mainStatus.width + _toolsMargin * 2
                 height: _indicatorHeight
+
+                // Status color strip (green = ready/armed OK, yellow = warnings, red = not ready / comms lost)
+                Rectangle {
+                    anchors.fill:   parent
+                    radius:         ScreenTools.defaultFontPixelWidth / 2
+                    color:          _mainStatusBGColor
+                    opacity:        0.35
+                }
+
+                MainStatusIndicator {
+                    id:             mainStatus
+                    x:              _toolsMargin
+                    height:         parent.height
+                }
+            }
+
+            // Remaining flight time ring: the bright arc shrinks as the battery is used,
+            // the used part stays faded. Center: remaining minutes (or % if unknown).
+            Item {
+                id:         flightTimeRing
+                width:      ScreenTools.defaultFontPixelHeight * 3.6
+                height:     width
+                anchors.horizontalCenter: parent.horizontalCenter
+                visible:    _activeVehicle && _hasBattPercent
+
+                property real  fraction:  Math.max(0, Math.min(100, _battPercent)) / 100
+                property color arcColor:  _battColor()
+                property real  lineWidth: width * 0.11
+
+                onFractionChanged:  ringCanvas.requestPaint()
+                onArcColorChanged:  ringCanvas.requestPaint()
+
+                Canvas {
+                    id:             ringCanvas
+                    anchors.fill:   parent
+                    onPaint: {
+                        var ctx = getContext("2d")
+                        ctx.reset()
+                        var r = (width - flightTimeRing.lineWidth) / 2
+                        var cx = width / 2
+                        var cy = height / 2
+                        var start = -Math.PI / 2
+                        ctx.lineWidth = flightTimeRing.lineWidth
+                        ctx.lineCap = "round"
+                        // Used part (faded full circle)
+                        ctx.globalAlpha = 0.25
+                        ctx.strokeStyle = flightTimeRing.arcColor
+                        ctx.beginPath()
+                        ctx.arc(cx, cy, r, 0, 2 * Math.PI, false)
+                        ctx.stroke()
+                        // Remaining part (bright), clockwise from 12 o'clock
+                        if (flightTimeRing.fraction > 0) {
+                            ctx.globalAlpha = 1.0
+                            ctx.beginPath()
+                            ctx.arc(cx, cy, r, start, start + 2 * Math.PI * flightTimeRing.fraction, false)
+                            ctx.stroke()
+                        }
+                    }
+                }
+
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 0
+
+                    QGCLabel {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        font.bold:      true
+                        font.pointSize: ScreenTools.largeFontPointSize
+                        text: {
+                            if (!isNaN(_remainingSec)) {
+                                return (_timeIsEstimate ? "~" : "") + Math.floor(Math.max(0, _remainingSec) / 60)
+                            }
+                            return Math.round(_battPercent) + "%"
+                        }
+                    }
+                    QGCLabel {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        font.pointSize: ScreenTools.smallFontPointSize
+                        text:           qsTr("min")
+                        visible:        !isNaN(_remainingSec)
+                    }
+                }
             }
 
             Repeater {

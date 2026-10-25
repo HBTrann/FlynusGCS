@@ -6,12 +6,12 @@
 # The user-visible Android label "Flynus GCS" is set in custom/android/AndroidManifest.xml.
 set(QGC_APP_NAME "FlynusGCS" CACHE STRING "App Name" FORCE)
 set(QGC_ORG_NAME "Flynus" CACHE STRING "Org Name" FORCE)
-set(QGC_ORG_DOMAIN "hypmotion.com" CACHE STRING "Domain" FORCE)
+set(QGC_ORG_DOMAIN "flynus.com" CACHE STRING "Domain" FORCE)
 set(QGC_APP_DESCRIPTION "Flynus GCS - Ground Control Station" CACHE STRING "Description" FORCE)
-set(QGC_APP_COPYRIGHT "Copyright (C) 2026 Hypmotion. All rights reserved." CACHE STRING "Copyright" FORCE)
+set(QGC_APP_COPYRIGHT "Copyright (C) 2026 Flynus. All rights reserved." CACHE STRING "Copyright" FORCE)
 # Different package id => installs side-by-side with stock QGroundControl.
-set(QGC_ANDROID_PACKAGE_NAME "com.hypmotion.flynusgcs" CACHE STRING "Android package identifier" FORCE)
-set(QGC_MACOS_BUNDLE_ID "com.hypmotion.flynusgcs" CACHE STRING "macOS bundle id" FORCE)
+set(QGC_ANDROID_PACKAGE_NAME "com.flynus.gcs" CACHE STRING "Android package identifier" FORCE)
+set(QGC_MACOS_BUNDLE_ID "com.flynus.gcs" CACHE STRING "macOS bundle id" FORCE)
 
 # Icons
 set(_FLYNUS_DIR "${CMAKE_SOURCE_DIR}/${QGC_CUSTOM_DIR}")
