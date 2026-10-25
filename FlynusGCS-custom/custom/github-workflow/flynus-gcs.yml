@@ -1,0 +1,202 @@
+# Flynus GCS - builds the Windows installer (.exe) and the Android APK.
+# Copy this file to .github/workflows/flynus-gcs.yml in your QGroundControl fork
+# (branch based on v5.1.5 with the custom/ folder in the repo root), then run it
+# from the Actions tab: "Flynus GCS" -> Run workflow.
+#
+# Based on upstream windows.yml / android.yml, without the steps that hard-code
+# the stock "QGroundControl.exe" name or need mavlink's secrets.
+
+name: Flynus GCS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - flynus
+    tags:
+      - 'flynus-v*'
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  AQT_SOURCE: 'git+https://github.com/miurahr/aqtinstall.git@8d961e61720b3c06583517fbc68d57ec0a4e9f95'
+
+jobs:
+  windows:
+    name: Windows installer (x64)
+    runs-on: windows-2022
+    timeout-minutes: 150
+    defaults:
+      run:
+        shell: cmd
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Build Setup
+        id: build-setup
+        uses: ./.github/actions/build-setup
+        with:
+          qt-host: windows
+          qt-arch: win64_msvc2022_64
+          aqt-source: ${{ env.AQT_SOURCE }}
+          build-type: Release
+
+      - name: Configure
+        uses: ./.github/actions/cmake-configure
+        with:
+          build-dir: ${{ runner.temp }}/build
+          build-type: Release
+          extra-args: -DQGC_ENABLE_GST_VIDEOSTREAMING=ON
+
+      - name: Resolve GStreamer root
+        id: gst-root
+        shell: bash
+        run: |
+          python3 "${GITHUB_WORKSPACE}/.github/scripts/cmake_helper.py" cache-var \
+            --build-dir "${RUNNER_TEMP}/build" \
+            --name GStreamer_ROOT_DIR \
+            --required \
+            --output-key gst_root
+
+      - name: Add GStreamer to PATH
+        shell: bash
+        run: echo "${GST_ROOT}/bin" >> "$GITHUB_PATH"
+        env:
+          GST_ROOT: ${{ steps.gst-root.outputs.gst_root }}
+
+      - name: Build
+        uses: ./.github/actions/cmake-build
+        with:
+          build-dir: ${{ runner.temp }}/build
+          build-type: Release
+
+      - name: Create Installer
+        uses: ./.github/actions/cmake-install
+        with:
+          build-dir: ${{ runner.temp }}\build
+          build-type: Release
+
+      - name: Collect installer
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path "${{ runner.temp }}\build" -Filter "*installer*.exe" | Select-Object -First 1
+          if (-not $exe) { Write-Error "Installer .exe not found"; exit 1 }
+          New-Item -ItemType Directory -Force -Path "${{ runner.temp }}\out" | Out-Null
+          Copy-Item $exe.FullName "${{ runner.temp }}\out\FlynusGCS-Setup-x64.exe"
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: FlynusGCS-Windows-x64
+          path: ${{ runner.temp }}/out/FlynusGCS-Setup-x64.exe
+          retention-days: 30
+
+  android:
+    name: Android APK (arm64 + armv7)
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      QT_ANDROID_ABIS: 'arm64-v8a;armeabi-v7a'
+      # Optional release signing: add these repository secrets
+      # (FLYNUS_KEYSTORE_BASE64, FLYNUS_KEYSTORE_ALIAS, FLYNUS_KEYSTORE_PASSWORD).
+      # Without them the APK is signed with a throw-away debug key.
+      HAS_KEYSTORE: ${{ secrets.FLYNUS_KEYSTORE_BASE64 != '' }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set Android SDK location
+        run: |
+          echo "ANDROID_SDK_ROOT=${RUNNER_TEMP}/android-sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=${RUNNER_TEMP}/android-sdk" >> "$GITHUB_ENV"
+
+      - name: Build Setup (Android)
+        id: setup
+        uses: ./.github/actions/build-setup
+        with:
+          mode: android
+          qt-host: linux
+          qt-arch: linux_gcc_64
+          abis: ${{ env.QT_ANDROID_ABIS }}
+          build-type: Release
+          cache-key-suffix: flynus
+          cpm-modules: ${{ runner.temp }}/build/cpm_modules
+
+      - name: Install host build dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Release keystore
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          KS_B64: ${{ secrets.FLYNUS_KEYSTORE_BASE64 }}
+          KS_ALIAS: ${{ secrets.FLYNUS_KEYSTORE_ALIAS }}
+          KS_PASS: ${{ secrets.FLYNUS_KEYSTORE_PASSWORD }}
+        run: |
+          echo "$KS_B64" | base64 -d > "${RUNNER_TEMP}/flynus.keystore"
+          {
+            echo "QT_ANDROID_KEYSTORE_PATH=${RUNNER_TEMP}/flynus.keystore"
+            echo "QT_ANDROID_KEYSTORE_ALIAS=${KS_ALIAS}"
+            echo "QT_ANDROID_KEYSTORE_STORE_PASS=${KS_PASS}"
+            echo "QT_ANDROID_KEYSTORE_KEY_PASS=${KS_PASS}"
+          } >> "$GITHUB_ENV"
+
+      - name: Debug keystore
+        if: env.HAS_KEYSTORE != 'true'
+        run: |
+          keytool -genkey -v -keystore "${RUNNER_TEMP}/debug.keystore" \
+            -storepass android -alias androiddebugkey -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          {
+            echo "QT_ANDROID_KEYSTORE_PATH=${RUNNER_TEMP}/debug.keystore"
+            echo "QT_ANDROID_KEYSTORE_ALIAS=androiddebugkey"
+            echo "QT_ANDROID_KEYSTORE_STORE_PASS=android"
+            echo "QT_ANDROID_KEYSTORE_KEY_PASS=android"
+          } >> "$GITHUB_ENV"
+
+      - name: Configure
+        uses: ./.github/actions/cmake-configure
+        with:
+          build-dir: ${{ runner.temp }}/build
+          build-type: Release
+          use-qt-cmake: 'false'
+          extra-args: >-
+            -DCMAKE_WARN_DEPRECATED=FALSE
+            -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup.outputs.target_qt_root_dir }}/lib/cmake/Qt6/qt.toolchain.cmake
+            -DCMAKE_PREFIX_PATH=${{ steps.setup.outputs.target_qt_root_dir }}
+            -DQT_ANDROID_ABIS=${{ env.QT_ANDROID_ABIS }}
+            -DQT_HOST_PATH=${{ steps.setup.outputs.host_qt_root_dir }}
+            -DQT_ANDROID_SIGN_APK=ON
+
+      - name: Build
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false
+        uses: ./.github/actions/cmake-build
+        with:
+          build-dir: ${{ runner.temp }}/build
+          build-type: Release
+
+      - name: Collect APK
+        run: |
+          APK=$(ls "${RUNNER_TEMP}"/build/android-build/*.apk | head -1)
+          [ -n "$APK" ] || { echo "::error::No APK found"; exit 1; }
+          mkdir -p "${RUNNER_TEMP}/out"
+          cp "$APK" "${RUNNER_TEMP}/out/FlynusGCS.apk"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: FlynusGCS-Android
+          path: ${{ runner.temp }}/out/FlynusGCS.apk
+          retention-days: 30

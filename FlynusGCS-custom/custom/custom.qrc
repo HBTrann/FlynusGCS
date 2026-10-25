@@ -1,0 +1,16 @@
+<RCC>
+    <!-- Files under /Custom/... replace the stock QGC file at the same path
+         (see CustomOverrideInterceptor in src/CustomPlugin.cc). -->
+    <qresource prefix="/Custom/res">
+        <file alias="QGCLogoFull.svg">res/Images/FlynusLogoFull.svg</file>
+        <file alias="QGCLogoWhite.svg">res/Images/FlynusLogoWhite.svg</file>
+        <file alias="QGCLogoWhite">res/Images/FlynusLogoWhite.svg</file>
+        <file alias="qgroundcontrol.ico">res/icons/flynus_gcs.ico</file>
+    </qresource>
+    <!-- Extra brand assets available to QML as qrc:/flynus/... -->
+    <qresource prefix="/flynus">
+        <file alias="FlynusWordmark.svg">res/Images/FlynusWordmark.svg</file>
+        <file alias="FlynusWordmarkWhite.svg">res/Images/FlynusWordmarkWhite.svg</file>
+        <file alias="FlynusLogo.svg">res/Images/FlynusLogoFull.svg</file>
+    </qresource>
+</RCC>
