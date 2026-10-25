@@ -2,10 +2,19 @@
     <!-- Files under /Custom/... replace the stock QGC file at the same path
          (see CustomOverrideInterceptor in src/CustomPlugin.cc). -->
     <qresource prefix="/Custom/res">
-        <file alias="QGCLogoFull.svg">res/Images/FlynusLogoFull.svg</file>
+        <file alias="QGCLogoFull.svg">res/Images/FlynusLogoTile.svg</file>
         <file alias="QGCLogoWhite.svg">res/Images/FlynusLogoWhite.svg</file>
         <file alias="QGCLogoWhite">res/Images/FlynusLogoWhite.svg</file>
         <file alias="qgroundcontrol.ico">res/icons/flynus_gcs.ico</file>
+    </qresource>
+    <!-- QML overrides: centered compass + telemetry, battery/time bar, left indicator panel, mode-only top bar -->
+    <qresource prefix="/Custom/qml/QGroundControl/FlyView">
+        <file alias="FlyViewBottomRightRowLayout.qml">res/qml/FlyView/FlyViewBottomRightRowLayout.qml</file>
+        <file alias="FlyViewCustomLayer.qml">res/qml/FlyView/FlyViewCustomLayer.qml</file>
+        <file alias="FlyViewWidgetLayer.qml">res/qml/FlyView/FlyViewWidgetLayer.qml</file>
+    </qresource>
+    <qresource prefix="/Custom/qml/QGroundControl/Toolbar">
+        <file alias="FlyViewToolBar.qml">res/qml/Toolbar/FlyViewToolBar.qml</file>
     </qresource>
     <!-- Extra brand assets available to QML as qrc:/flynus/... -->
     <qresource prefix="/flynus">

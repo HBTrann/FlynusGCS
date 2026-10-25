@@ -21,6 +21,8 @@ public:
 
     void adjustSettingMetaData(const QString &settingsGroup, FactMetaData &metaData, bool &userVisible) final;
     void paletteOverride(const QString &colorName, QGCPalette::PaletteColorInfo_t &colorInfo) final;
+    /// Default values for the left/right telemetry bars around the centered compass.
+    void factValueGridCreateDefaultSettings(FactValueGrid *factValueGrid) final;
     QQmlApplicationEngine *createQmlApplicationEngine(QObject *parent) final;
     void destroyQmlApplicationEngine(QQmlApplicationEngine *qmlEngine) final;
 

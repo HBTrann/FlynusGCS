@@ -1,5 +1,10 @@
 #include "CustomPlugin.h"
 #include "AppSettings.h"
+#include "Fact.h"
+#include "FactValueGrid.h"
+#include "InstrumentValueData.h"
+#include "QGCMAVLink.h"
+#include "QmlObjectListModel.h"
 #include "QGCLoggingCategory.h"
 #include "QGCPalette.h"
 
@@ -81,6 +86,78 @@ void CustomPlugin::paletteOverride(const QString &colorName, QGCPalette::Palette
     else if (colorName == QStringLiteral("toolStripHoverColor")) setColor(c, "#C9D6CB", "#585858", "#3E5A43", "#585858");
     else if (colorName == QStringLiteral("brandingPurple"))      setColor(c, kFlynusGreen, kFlynusGreen, kFlynusGreen, kFlynusGreen);
     else if (colorName == QStringLiteral("brandingBlue"))        setColor(c, kFlynusRed, kFlynusRed, kFlynusRed, kFlynusRed);
+}
+
+void CustomPlugin::factValueGridCreateDefaultSettings(FactValueGrid *factValueGrid)
+{
+    // Settings groups used by custom/res/qml/FlyView/FlyViewBottomRightRowLayout.qml
+    const QString group = factValueGrid->settingsGroup();
+    const bool isLeft  = (group == QStringLiteral("FlynusTelemetryLeft"));
+    const bool isRight = (group == QStringLiteral("FlynusTelemetryRight"));
+    if (!isLeft && !isRight) {
+        QGCCorePlugin::factValueGridCreateDefaultSettings(factValueGrid);
+        return;
+    }
+
+    const QGCMAVLink::VehicleClass_t vehicleClass = factValueGrid->vehicleClass();
+    const bool fixedWing = (vehicleClass == QGCMAVLink::VehicleClassFixedWing) ||
+                           (vehicleClass == QGCMAVLink::VehicleClassVTOL) ||
+                           (vehicleClass == QGCMAVLink::VehicleClassAirship);
+
+#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+    factValueGrid->setFontSize(FactValueGrid::DefaultFontSize);
+#else
+    factValueGrid->setFontSize(FactValueGrid::MediumFontSize);
+#endif
+
+    // 2 columns x 2 rows on each side
+    (void) factValueGrid->appendColumn();
+    (void) factValueGrid->appendColumn();
+    factValueGrid->appendRow();
+
+    struct Cell { const char *fact; const char *icon; const char *text; bool units; };
+    auto setCell = [factValueGrid](int col, int row, const Cell &cell) {
+        QmlObjectListModel *column = factValueGrid->columns()->value<QmlObjectListModel*>(col);
+        if (!column) {
+            return;
+        }
+        InstrumentValueData *value = column->value<InstrumentValueData*>(row);
+        if (!value) {
+            return;
+        }
+        value->setFact(QStringLiteral("Vehicle"), QString::fromLatin1(cell.fact));
+        if (cell.icon) {
+            value->setIcon(QString::fromLatin1(cell.icon));
+        }
+        if (cell.text) {
+            value->setText(QString::fromLatin1(cell.text));
+        } else if (value->fact()) {
+            value->setText(value->fact()->shortDescription());
+        }
+        value->setShowUnits(cell.units);
+    };
+
+    if (isLeft) {
+        // Height & speed
+        setCell(0, 0, {"AltitudeRelative", "arrow-thick-up.svg", nullptr, true});
+        setCell(0, 1, {"ClimbRate", "arrow-simple-up.svg", nullptr, true});
+        setCell(1, 0, {"GroundSpeed", "arrow-simple-right.svg", nullptr, true});
+        if (fixedWing) {
+            setCell(1, 1, {"AirSpeed", nullptr, "AirSpd", true});
+        } else {
+            setCell(1, 1, {"AltitudeAMSL", nullptr, "AMSL", true});
+        }
+    } else {
+        // Distance & time
+        setCell(0, 0, {"DistanceToHome", "bookmark copy 3.svg", nullptr, true});
+        setCell(0, 1, {"FlightDistance", "travel-walk.svg", nullptr, true});
+        setCell(1, 0, {"FlightTime", "timer.svg", nullptr, false});
+        if (fixedWing) {
+            setCell(1, 1, {"ThrottlePct", nullptr, "Thr", true});
+        } else {
+            setCell(1, 1, {"Heading", nullptr, "Hdg", true});
+        }
+    }
 }
 
 QQmlApplicationEngine *CustomPlugin::createQmlApplicationEngine(QObject *parent)

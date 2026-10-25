@@ -22,3 +22,6 @@ set(QGC_WINDOWS_ICON_PATH "${_FLYNUS_DIR}/deploy/windows/FlynusGCS.ico" CACHE FI
 set(QGC_WINDOWS_INSTALL_HEADER_PATH "${_FLYNUS_DIR}/deploy/windows/installheader.bmp" CACHE FILEPATH "Windows Install Header Path" FORCE)
 
 # Both PX4 and ArduPilot stay supported (stock firmware plugins are kept).
+
+# Release build: no "Daily" suffix in the window title / settings name.
+set(QGC_STABLE_BUILD ON CACHE BOOL "Stable release build" FORCE)
