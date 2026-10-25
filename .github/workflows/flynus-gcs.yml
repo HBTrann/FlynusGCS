@@ -44,7 +44,7 @@ jobs:
           # The custom/ folder must sit in the repo root. Also accept it one level deeper
           # (e.g. FlynusGCS-custom/custom after uploading the extracted zip folder).
           if [ ! -f custom/CMakeLists.txt ]; then
-            found=$(find . -mindepth 2 -maxdepth 3 -type f -path '*/custom/cmake/CustomOverrides.cmake' | head -1)
+            found=$(find . -mindepth 3 -maxdepth 5 -type f -path '*/custom/cmake/CustomOverrides.cmake' | head -1)
             [ -n "$found" ] || { echo "::error::custom/ folder not found"; exit 1; }
             src=$(dirname "$(dirname "$found")")
             echo "Using $src as custom/"
@@ -137,7 +137,7 @@ jobs:
           # The custom/ folder must sit in the repo root. Also accept it one level deeper
           # (e.g. FlynusGCS-custom/custom after uploading the extracted zip folder).
           if [ ! -f custom/CMakeLists.txt ]; then
-            found=$(find . -mindepth 2 -maxdepth 3 -type f -path '*/custom/cmake/CustomOverrides.cmake' | head -1)
+            found=$(find . -mindepth 3 -maxdepth 5 -type f -path '*/custom/cmake/CustomOverrides.cmake' | head -1)
             [ -n "$found" ] || { echo "::error::custom/ folder not found"; exit 1; }
             src=$(dirname "$(dirname "$found")")
             echo "Using $src as custom/"
