@@ -19,6 +19,7 @@ import QGroundControl.Toolbar
 // Flynus GCS override: a status/indicator panel (Ready, flight-time ring, battery, GPS, RC, telemetry, ...)
 // sits at the top-left; the Takeoff/Return tool strip is placed below it in the same
 // column, so extra tool strip buttons never move the status panel.
+// Navigation buttons: Plan/Configure/Analyze/Settings bottom-left, Close bottom-right.
 Item {
     id: _root
 
@@ -45,16 +46,16 @@ Item {
         id:                     _totalToolInsets
         leftEdgeTopInset:       Math.max(toolStrip.leftEdgeTopInset, statusPanel.leftEdgeTopInset)
         leftEdgeCenterInset:    toolStrip.leftEdgeCenterInset
-        leftEdgeBottomInset:    virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.leftEdgeBottomInset : parentToolInsets.leftEdgeBottomInset
+        leftEdgeBottomInset:    Math.max(navPanelLeft.visible ? navPanelLeft.width : 0, virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.leftEdgeBottomInset : parentToolInsets.leftEdgeBottomInset)
         rightEdgeTopInset:      topRightPanel.rightEdgeTopInset
         rightEdgeCenterInset:   topRightPanel.rightEdgeCenterInset
-        rightEdgeBottomInset:   bottomRightRowLayout.rightEdgeBottomInset
+        rightEdgeBottomInset:   Math.max(bottomRightRowLayout.rightEdgeBottomInset, navPanelRight.visible ? navPanelRight.width + _layoutMargin : 0)
         topEdgeLeftInset:       toolStrip.topEdgeLeftInset
         topEdgeCenterInset:     mapScale.topEdgeCenterInset
         topEdgeRightInset:      topRightPanel.topEdgeRightInset
-        bottomEdgeLeftInset:    virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.bottomEdgeLeftInset : parentToolInsets.bottomEdgeLeftInset
+        bottomEdgeLeftInset:    Math.max(navPanelLeft.visible ? navPanelLeft.height + navPanelLeft.anchors.bottomMargin : 0, virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.bottomEdgeLeftInset : parentToolInsets.bottomEdgeLeftInset)
         bottomEdgeCenterInset:  bottomRightRowLayout.bottomEdgeCenterInset
-        bottomEdgeRightInset:   virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.bottomEdgeRightInset : bottomRightRowLayout.bottomEdgeRightInset
+        bottomEdgeRightInset:   Math.max(navPanelRight.visible ? navPanelRight.height + _layoutMargin : 0, virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.bottomEdgeRightInset : bottomRightRowLayout.bottomEdgeRightInset)
     }
 
     FlyViewTopRightPanel {
@@ -345,13 +346,131 @@ Item {
         }
     }
 
+    // ---- Flynus: navigation buttons ----------------------------------------
+    // Bottom-left: Plan / Configure / Analyze / Settings. Bottom-right: Close.
+    // (The logo menu still has all items for quick switching from any screen.)
+
+    component FlynusNavButton: Rectangle {
+        id:             navButton
+        width:          navRow.width + _m * 3
+        height:         ScreenTools.defaultFontPixelHeight * 2.2
+        radius:         ScreenTools.defaultFontPixelWidth / 2
+        color:          navMouse.pressed ? QGroundControl.globalPalette.buttonHighlight : "transparent"
+
+        // Inline component: no access to the outer file's properties, so keep sizes local
+        readonly property real _m: ScreenTools.defaultFontPixelWidth * 0.75
+        property string text
+        property string iconSource
+        signal clicked()
+
+        Row {
+            id:                 navRow
+            anchors.verticalCenter: parent.verticalCenter
+            x:                  _m * 1.5
+            spacing:            ScreenTools.defaultFontPixelWidth
+
+            QGCColoredImage {
+                anchors.verticalCenter: parent.verticalCenter
+                width:              ScreenTools.defaultFontPixelHeight * 1.2
+                height:             width
+                sourceSize.height:  height
+                source:             navButton.iconSource
+                color:              navMouse.pressed ? QGroundControl.globalPalette.buttonHighlightText : QGroundControl.globalPalette.text
+                fillMode:           Image.PreserveAspectFit
+            }
+
+            QGCLabel {
+                anchors.verticalCenter: parent.verticalCenter
+                text:   navButton.text
+                color:  navMouse.pressed ? QGroundControl.globalPalette.buttonHighlightText : QGroundControl.globalPalette.text
+            }
+        }
+
+        QGCMouseArea {
+            id:             navMouse
+            anchors.fill:   parent
+            onClicked:      navButton.clicked()
+        }
+    }
+
+    Rectangle {
+        id:                     navPanelLeft
+        anchors.left:           parent.left
+        anchors.bottom:         parent.bottom
+        anchors.bottomMargin:   parentToolInsets.bottomEdgeLeftInset
+        width:                  navColumn.width + _toolsMargin * 2
+        height:                 navColumn.height + _toolsMargin * 2
+        radius:                 ScreenTools.defaultFontPixelWidth / 2
+        color:                  Qt.rgba(QGroundControl.globalPalette.window.r, QGroundControl.globalPalette.window.g, QGroundControl.globalPalette.window.b, 0.75)
+        z:                      QGroundControl.zOrderWidgets
+        visible:                !QGroundControl.videoManager.fullScreen
+
+        Column {
+            id:         navColumn
+            x:          _toolsMargin
+            y:          _toolsMargin
+            spacing:    _toolsMargin / 2
+
+            FlynusNavButton {
+                objectName: "flynus_navPlan"
+                text:       qsTr("Plan")
+                iconSource: "/qmlimages/Plan.svg"
+                onClicked:  if (mainWindow.allowViewSwitch()) mainWindow.showPlanView()
+            }
+            FlynusNavButton {
+                objectName: "flynus_navConfigure"
+                text:       qsTr("Configure")
+                iconSource: "/res/GearWithPaperPlane.svg"
+                onClicked:  if (mainWindow.allowViewSwitch()) mainWindow.showVehicleConfig()
+            }
+            FlynusNavButton {
+                objectName: "flynus_navAnalyze"
+                text:       qsTr("Analyze")
+                iconSource: "/qmlimages/Analyze.svg"
+                visible:    QGroundControl.corePlugin.showAdvancedUI
+                onClicked:  if (mainWindow.allowViewSwitch()) mainWindow.showAnalyzeTool()
+            }
+            FlynusNavButton {
+                objectName: "flynus_navSettings"
+                text:       qsTr("Settings")
+                iconSource: "/qmlimages/Gears.svg"
+                visible:    !QGroundControl.corePlugin.options.combineSettingsAndSetup
+                onClicked:  if (mainWindow.allowViewSwitch()) mainWindow.showSettingsTool()
+            }
+        }
+    }
+
+    Rectangle {
+        id:                     navPanelRight
+        anchors.right:          parent.right
+        anchors.bottom:         parent.bottom
+        width:                  closeButton.width + _toolsMargin * 2
+        height:                 closeButton.height + _toolsMargin * 2
+        radius:                 ScreenTools.defaultFontPixelWidth / 2
+        color:                  Qt.rgba(QGroundControl.globalPalette.window.r, QGroundControl.globalPalette.window.g, QGroundControl.globalPalette.window.b, 0.75)
+        z:                      QGroundControl.zOrderWidgets
+        visible:                !QGroundControl.videoManager.fullScreen
+
+        FlynusNavButton {
+            id:         closeButton
+            objectName: "flynus_navClose"
+            x:          _toolsMargin
+            y:          _toolsMargin
+            text:       qsTr("Close")
+            iconSource: "/res/OpenDoor.svg"
+            // Same as the stock menu: goes through the window close checks
+            // (unsaved mission, pending parameters, active connection).
+            onClicked:  if (mainWindow.allowViewSwitch()) mainWindow.close()
+        }
+    }
+
     FlyViewToolStrip {
         id:                     toolStrip
         anchors.left:           parent.left
         anchors.top:            statusPanel.bottom
         anchors.topMargin:      _toolsMargin
         z:                      QGroundControl.zOrderWidgets
-        maxHeight:              parent.height - y - parentToolInsets.bottomEdgeLeftInset - _toolsMargin
+        maxHeight:              parent.height - y - Math.max(parentToolInsets.bottomEdgeLeftInset, navPanelLeft.visible ? navPanelLeft.height + navPanelLeft.anchors.bottomMargin : 0) - _toolsMargin
         visible:                !QGroundControl.videoManager.fullScreen
 
         onDisplayPreFlightChecklist: {

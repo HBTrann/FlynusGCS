@@ -14,6 +14,7 @@
     </qresource>
     <qresource prefix="/Custom/qml/QGroundControl/Toolbar">
         <file alias="FlyViewToolBar.qml">res/qml/Toolbar/FlyViewToolBar.qml</file>
+        <file alias="SelectViewDropdown.qml">res/qml/Toolbar/SelectViewDropdown.qml</file>
     </qresource>
     <!-- Extra brand assets available to QML as qrc:/flynus/... -->
     <qresource prefix="/flynus">
