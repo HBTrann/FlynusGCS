@@ -16,10 +16,14 @@
         <file alias="FlyViewToolBar.qml">res/qml/Toolbar/FlyViewToolBar.qml</file>
         <file alias="SelectViewDropdown.qml">res/qml/Toolbar/SelectViewDropdown.qml</file>
     </qresource>
+    <qresource prefix="/Custom/qml/QGroundControl/Controls">
+        <file alias="QGCToolBarButton.qml">res/qml/Controls/QGCToolBarButton.qml</file>
+    </qresource>
     <!-- Extra brand assets available to QML as qrc:/flynus/... -->
     <qresource prefix="/flynus">
         <file alias="FlynusWordmark.svg">res/Images/FlynusWordmark.svg</file>
         <file alias="FlynusWordmarkWhite.svg">res/Images/FlynusWordmarkWhite.svg</file>
         <file alias="FlynusLogo.svg">res/Images/FlynusLogoFull.svg</file>
+        <file alias="FlynusWordmarkTile.svg">res/Images/FlynusWordmarkTile.svg</file>
     </qresource>
 </RCC>
