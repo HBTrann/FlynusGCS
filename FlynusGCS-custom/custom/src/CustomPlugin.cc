@@ -1,15 +1,11 @@
 #include "CustomPlugin.h"
 #include "AppSettings.h"
-#include "Fact.h"
-#include "FactValueGrid.h"
-#include "InstrumentValueData.h"
-#include "QGCMAVLink.h"
-#include "QmlObjectListModel.h"
 #include "QGCLoggingCategory.h"
 #include "QGCPalette.h"
 
 #include <QtCore/QApplicationStatic>
 #include <QtCore/QFile>
+#include <QtGui/QFontDatabase>
 #include <QtQml/QQmlApplicationEngine>
 
 QGC_LOGGING_CATEGORY(CustomLog, "Custom.CustomPlugin")
@@ -21,9 +17,9 @@ Q_APPLICATION_STATIC(CustomPlugin, _customPluginInstance);
 // ---------------------------------------------------------------------------
 namespace {
 constexpr const char *kFlynusGreen      = "#223B25";   // wordmark green
-constexpr const char *kFlynusGreenLight = "#3E7A47";   // green for dark theme
 constexpr const char *kFlynusRed        = "#BC0814";   // "F" red
 constexpr const char *kFlynusRedLight   = "#FF4D57";   // red for dark theme
+constexpr const char *kFlynusAccent     = "#2FBF4A";   // bright green accent (Flynus Dark)
 
 void setColor(QGCPalette::PaletteColorInfo_t &info,
               const char *lightEnabled, const char *lightDisabled,
@@ -47,117 +43,76 @@ QGCCorePlugin *CustomPlugin::instance()
     return _customPluginInstance();
 }
 
+void CustomPlugin::init()
+{
+    QGCCorePlugin::init();
+
+    // Flynus UI font: Barlow (SIL OFL 1.1), re-labelled with the family name "Open Sans"
+    // because QGC hard-codes that family in ScreenToolsController::normalFontFamily().
+    // Remove the stock Open Sans application fonts first so ours are the only match.
+    for (int id = 0; id < 32; id++) {
+        const QStringList families = QFontDatabase::applicationFontFamilies(id);
+        for (const QString &family : families) {
+            if (family.startsWith(QStringLiteral("Open Sans"))) {
+                (void) QFontDatabase::removeApplicationFont(id);
+                break;
+            }
+        }
+    }
+    static const char *const fonts[] = {
+        ":/flynus/fonts/FlynusUI-Regular.ttf",
+        ":/flynus/fonts/FlynusUI-SemiBold.ttf",
+        ":/flynus/fonts/FlynusUI-Bold.ttf",
+    };
+    for (const char *font : fonts) {
+        if (QFontDatabase::addApplicationFont(QString::fromLatin1(font)) < 0) {
+            qCWarning(CustomLog) << "Could not load font" << font;
+        }
+    }
+}
+
 void CustomPlugin::adjustSettingMetaData(const QString &settingsGroup, FactMetaData &metaData, bool &userVisible)
 {
     QGCCorePlugin::adjustSettingMetaData(settingsGroup, metaData, userVisible);
 
     if (settingsGroup == AppSettings::settingsGroup) {
         if (metaData.name() == AppSettings::indoorPaletteName) {
-            // Default to the white (light) theme on every platform.
+            // Default to the "Flynus Dark" theme (1 = Indoor/Dark) on every platform.
             // Users can still switch in Application Settings > General > Color Scheme.
-            metaData.setRawDefaultValue(0);
+            metaData.setRawDefaultValue(1);
         }
     }
 }
 
 void CustomPlugin::paletteOverride(const QString &colorName, QGCPalette::PaletteColorInfo_t &c)
 {
-    //                                            Light enabled  Light disabled  Dark enabled      Dark disabled
-    if      (colorName == QStringLiteral("window"))              setColor(c, "#FFFFFF", "#FFFFFF", "#1E2320", "#1E2320");
-    else if (colorName == QStringLiteral("windowTransparent"))   setColor(c, "#E6FFFFFF", "#E6FFFFFF", "#CC1E2320", "#CC1E2320");
-    else if (colorName == QStringLiteral("windowShade"))         setColor(c, "#F1F3F2", "#E6E8E7", "#2C332E", "#2C332E");
-    else if (colorName == QStringLiteral("windowShadeDark"))     setColor(c, "#E2E6E3", "#CFD4D0", "#242A26", "#242A26");
-    else if (colorName == QStringLiteral("text"))                setColor(c, "#1D2A1F", "#9AA39B", "#FFFFFF", "#707070");
+    // Dark = "Flynus Dark" (default theme), Light = white theme.
+    //                                            Light enabled  Light disabled  Dark enabled   Dark disabled
+    if      (colorName == QStringLiteral("window"))              setColor(c, "#FFFFFF", "#FFFFFF", "#141815", "#141815");
+    else if (colorName == QStringLiteral("windowTransparent"))   setColor(c, "#E6FFFFFF", "#E6FFFFFF", "#CC141815", "#CC141815");
+    else if (colorName == QStringLiteral("windowShade"))         setColor(c, "#F1F3F2", "#E6E8E7", "#1C221E", "#1C221E");
+    else if (colorName == QStringLiteral("windowShadeDark"))     setColor(c, "#E2E6E3", "#CFD4D0", "#101311", "#101311");
+    else if (colorName == QStringLiteral("text"))                setColor(c, "#1D2A1F", "#9AA39B", "#F2F5F3", "#6F7A72");
     else if (colorName == QStringLiteral("warningText"))         setColor(c, kFlynusRed, kFlynusRed, kFlynusRedLight, kFlynusRedLight);
-    else if (colorName == QStringLiteral("button"))              setColor(c, "#FFFFFF", "#FFFFFF", "#3A423C", "#3A423C");
-    else if (colorName == QStringLiteral("buttonBorder"))        setColor(c, kFlynusGreen, "#B5BCB6", "#6AA874", "#5A625C");
-    else if (colorName == QStringLiteral("buttonText"))          setColor(c, "#1D2A1F", "#9AA39B", "#FFFFFF", "#8A928C");
-    else if (colorName == QStringLiteral("buttonHighlight"))     setColor(c, kFlynusGreen, "#E4E7E5", kFlynusGreenLight, "#3A3A3A");
-    else if (colorName == QStringLiteral("buttonHighlightText")) setColor(c, "#FFFFFF", "#2C2C2C", "#FFFFFF", "#2C2C2C");
-    else if (colorName == QStringLiteral("primaryButton"))       setColor(c, kFlynusGreen, "#B5BCB6", kFlynusGreenLight, "#585858");
-    else if (colorName == QStringLiteral("primaryButtonText"))   setColor(c, "#FFFFFF", "#F0F0F0", "#FFFFFF", "#2C2C2C");
-    else if (colorName == QStringLiteral("textField"))           setColor(c, "#FFFFFF", "#F1F3F2", "#FFFFFF", "#707070");
-    else if (colorName == QStringLiteral("textFieldText"))       setColor(c, "#1D2A1F", "#808080", "#000000", "#000000");
-    else if (colorName == QStringLiteral("groupBorder"))         setColor(c, kFlynusGreen, "#C8CDC9", "#4D5A4F", "#4D5A4F");
-    else if (colorName == QStringLiteral("mapButtonHighlight"))  setColor(c, kFlynusRed, "#585858", kFlynusRedLight, "#585858");
-    else if (colorName == QStringLiteral("mapIndicator"))        setColor(c, kFlynusRed, "#585858", kFlynusRedLight, "#585858");
+    else if (colorName == QStringLiteral("button"))              setColor(c, "#FFFFFF", "#FFFFFF", "#232A25", "#232A25");
+    else if (colorName == QStringLiteral("buttonBorder"))        setColor(c, kFlynusGreen, "#B5BCB6", kFlynusAccent, "#3A423C");
+    else if (colorName == QStringLiteral("buttonText"))          setColor(c, "#1D2A1F", "#9AA39B", "#F2F5F3", "#6F7A72");
+    else if (colorName == QStringLiteral("buttonHighlight"))     setColor(c, kFlynusGreen, "#E4E7E5", kFlynusAccent, "#2C332E");
+    else if (colorName == QStringLiteral("buttonHighlightText")) setColor(c, "#FFFFFF", "#2C2C2C", "#0B0D0C", "#2C2C2C");
+    else if (colorName == QStringLiteral("primaryButton"))       setColor(c, kFlynusGreen, "#B5BCB6", kFlynusAccent, "#3A423C");
+    else if (colorName == QStringLiteral("primaryButtonText"))   setColor(c, "#FFFFFF", "#F0F0F0", "#0B0D0C", "#6F7A72");
+    else if (colorName == QStringLiteral("textField"))           setColor(c, "#FFFFFF", "#F1F3F2", "#1C221E", "#141815");
+    else if (colorName == QStringLiteral("textFieldText"))       setColor(c, "#1D2A1F", "#808080", "#F2F5F3", "#6F7A72");
+    else if (colorName == QStringLiteral("groupBorder"))         setColor(c, kFlynusGreen, "#C8CDC9", "#2C3530", "#2C3530");
+    else if (colorName == QStringLiteral("mapButtonHighlight"))  setColor(c, kFlynusRed, "#585858", kFlynusAccent, "#585858");
+    else if (colorName == QStringLiteral("mapIndicator"))        setColor(c, kFlynusRed, "#585858", kFlynusAccent, "#585858");
+    else if (colorName == QStringLiteral("colorGreen"))          setColor(c, "#1E8E34", "#1E8E34", kFlynusAccent, kFlynusAccent);
     else if (colorName == QStringLiteral("colorRed"))            setColor(c, kFlynusRed, kFlynusRed, kFlynusRedLight, kFlynusRedLight);
-    else if (colorName == QStringLiteral("missionItemEditor"))   setColor(c, "#E8EFE9", "#585858", "#2C3A2E", "#585858");
-    else if (colorName == QStringLiteral("toolStripHoverColor")) setColor(c, "#C9D6CB", "#585858", "#3E5A43", "#585858");
+    else if (colorName == QStringLiteral("missionItemEditor"))   setColor(c, "#E8EFE9", "#585858", "#1C221E", "#585858");
+    else if (colorName == QStringLiteral("toolStripHoverColor")) setColor(c, "#C9D6CB", "#585858", "#2C3A2E", "#585858");
     else if (colorName == QStringLiteral("brandingPurple"))      setColor(c, kFlynusGreen, kFlynusGreen, kFlynusGreen, kFlynusGreen);
     else if (colorName == QStringLiteral("brandingBlue"))        setColor(c, kFlynusRed, kFlynusRed, kFlynusRed, kFlynusRed);
-}
-
-void CustomPlugin::factValueGridCreateDefaultSettings(FactValueGrid *factValueGrid)
-{
-    // Settings groups used by custom/res/qml/FlyView/FlyViewBottomRightRowLayout.qml
-    const QString group = factValueGrid->settingsGroup();
-    const bool isLeft  = (group == QStringLiteral("FlynusTelemetryLeft"));
-    const bool isRight = (group == QStringLiteral("FlynusTelemetryRight"));
-    if (!isLeft && !isRight) {
-        QGCCorePlugin::factValueGridCreateDefaultSettings(factValueGrid);
-        return;
-    }
-
-    const QGCMAVLink::VehicleClass_t vehicleClass = factValueGrid->vehicleClass();
-    const bool fixedWing = (vehicleClass == QGCMAVLink::VehicleClassFixedWing) ||
-                           (vehicleClass == QGCMAVLink::VehicleClassVTOL) ||
-                           (vehicleClass == QGCMAVLink::VehicleClassAirship);
-
-#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
-    factValueGrid->setFontSize(FactValueGrid::DefaultFontSize);
-#else
-    factValueGrid->setFontSize(FactValueGrid::MediumFontSize);
-#endif
-
-    // 2 columns x 2 rows on each side
-    (void) factValueGrid->appendColumn();
-    (void) factValueGrid->appendColumn();
-    factValueGrid->appendRow();
-
-    struct Cell { const char *fact; const char *icon; const char *text; bool units; };
-    auto setCell = [factValueGrid](int col, int row, const Cell &cell) {
-        QmlObjectListModel *column = factValueGrid->columns()->value<QmlObjectListModel*>(col);
-        if (!column) {
-            return;
-        }
-        InstrumentValueData *value = column->value<InstrumentValueData*>(row);
-        if (!value) {
-            return;
-        }
-        value->setFact(QStringLiteral("Vehicle"), QString::fromLatin1(cell.fact));
-        if (cell.icon) {
-            value->setIcon(QString::fromLatin1(cell.icon));
-        }
-        if (cell.text) {
-            value->setText(QString::fromLatin1(cell.text));
-        } else if (value->fact()) {
-            value->setText(value->fact()->shortDescription());
-        }
-        value->setShowUnits(cell.units);
-    };
-
-    if (isLeft) {
-        // Height & speed
-        setCell(0, 0, {"AltitudeRelative", "arrow-thick-up.svg", nullptr, true});
-        setCell(0, 1, {"ClimbRate", "arrow-simple-up.svg", nullptr, true});
-        setCell(1, 0, {"GroundSpeed", "arrow-simple-right.svg", nullptr, true});
-        if (fixedWing) {
-            setCell(1, 1, {"AirSpeed", nullptr, "AirSpd", true});
-        } else {
-            setCell(1, 1, {"AltitudeAMSL", nullptr, "AMSL", true});
-        }
-    } else {
-        // Distance & time
-        setCell(0, 0, {"DistanceToHome", "bookmark copy 3.svg", nullptr, true});
-        setCell(0, 1, {"FlightDistance", "travel-walk.svg", nullptr, true});
-        setCell(1, 0, {"FlightTime", "timer.svg", nullptr, false});
-        if (fixedWing) {
-            setCell(1, 1, {"ThrottlePct", nullptr, "Thr", true});
-        } else {
-            setCell(1, 1, {"Heading", nullptr, "Hdg", true});
-        }
-    }
+    else if (colorName == QStringLiteral("mapMissionTrajectory")) setColor(c, "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF");
 }
 
 QQmlApplicationEngine *CustomPlugin::createQmlApplicationEngine(QObject *parent)

@@ -9,7 +9,8 @@ import QGroundControl.FlyView
 import QGroundControl.Toolbar
 
 // Flynus GCS override of the stock FlyViewToolBar.qml:
-// the top bar shows only the logo (menu) and the flight mode. Status, battery, GPS,
+// the top bar shows only the logo (menu) and a centered flight-mode pill on a
+// transparent gradient. Status, battery, GPS,
 // RC/telemetry signal and the other indicators live in the left side panel
 // (see custom/res/qml/FlyView/FlyViewCustomLayer.qml).
 Item {
@@ -31,6 +32,15 @@ Item {
 
     QGCPalette { id: qgcPal }
 
+    // Flynus: transparent top bar with a soft dark gradient instead of a solid bar
+    Rectangle {
+        anchors.fill:   parent
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.75) }
+            GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.0) }
+        }
+    }
+
     QGCFlickable {
         anchors.fill:       parent
         contentWidth:       toolBarLayout.width
@@ -45,29 +55,6 @@ Item {
                 id:     leftPanel
                 width:  leftPanelLayout.implicitWidth
                 height: parent.height
-
-                // Gradient background behind Q button and main status indicator
-                Rectangle {
-                    id:         gradientBackground
-                    height:     parent.height
-                    width:      mainStatusLayout.width
-                    opacity:    qgcPal.windowTransparent.a
-
-                    gradient: Gradient {
-                        orientation: Gradient.Horizontal
-                        GradientStop { position: 0; color: _mainStatusBGColor }
-                        //GradientStop { position: qgcButton.x + qgcButton.width; color: _mainStatusBGColor }
-                        GradientStop { position: 1; color: qgcPal.window }
-                    }
-                }
-
-                // Standard toolbar background to the right of the gradient
-                Rectangle {
-                    anchors.left:   gradientBackground.right
-                    anchors.right:  parent.right
-                    height:         parent.height
-                    color:          qgcPal.windowTransparent
-                }
 
                 RowLayout {
                     id:         leftPanelLayout
@@ -105,11 +92,6 @@ Item {
                         visible:    _activeVehicle && _communicationLost
                     }
 
-                    FlightModeIndicator {
-                        objectName:         "toolbar_flightModeIndicator"
-                        Layout.fillHeight:  true
-                        visible:            _activeVehicle
-                    }
                 }
             }
             Item {
@@ -118,9 +100,50 @@ Item {
                 width:  Math.max(guidedActionConfirm.visible ? guidedActionConfirm.width : 0, control.width - (leftPanel.width + rightPanel.width))
                 height: parent.height
 
+                // Flight mode "pill" centered in the toolbar (hidden while a guided action is being confirmed)
                 Rectangle {
-                    anchors.fill:   parent
-                    color:          qgcPal.windowTransparent
+                    id:                         modePill
+                    anchors.horizontalCenter:   parent.horizontalCenter
+                    anchors.verticalCenter:     parent.verticalCenter
+                    height:                     parent.height * 0.66
+                    width:                      modePillRow.width + height
+                    radius:                     height / 2
+                    color:                      Qt.rgba(0.055, 0.067, 0.059, 0.85)
+                    border.width:               1
+                    border.color:               _armed ? "#2FBF4A" : Qt.rgba(1, 1, 1, 0.25)
+                    visible:                    _activeVehicle && !guidedActionConfirm.visible
+
+                    property bool _armed: _activeVehicle ? _activeVehicle.armed : false
+
+                    RowLayout {
+                        id:                         modePillRow
+                        anchors.centerIn:           parent
+                        height:                     parent.height
+                        spacing:                    ScreenTools.defaultFontPixelWidth
+
+                        Rectangle {
+                            Layout.alignment:       Qt.AlignVCenter
+                            implicitWidth:          armedLabel.contentWidth + ScreenTools.defaultFontPixelWidth * 1.6
+                            implicitHeight:         armedLabel.contentHeight + ScreenTools.defaultFontPixelHeight * 0.2
+                            radius:                 height / 2
+                            color:                  modePill._armed ? "#2FBF4A" : "#3A403C"
+
+                            QGCLabel {
+                                id:                 armedLabel
+                                anchors.centerIn:   parent
+                                text:               modePill._armed ? qsTr("ARMED") : qsTr("DISARMED")
+                                font.pointSize:     ScreenTools.smallFontPointSize
+                                font.bold:          true
+                                font.letterSpacing: 1
+                                color:              modePill._armed ? "#0B0D0C" : "#DDDDDD"
+                            }
+                        }
+
+                        FlightModeIndicator {
+                            objectName:         "toolbar_flightModeIndicator"
+                            Layout.fillHeight:  true
+                        }
+                    }
                 }
 
                 GuidedActionConfirm {

@@ -14,6 +14,14 @@ This folder rebrands QGroundControl **5.1 stable** (branch `Stable_V5.1`, i.e. v
 | Splash | White screen with the Flynus wordmark |
 | Update check | Disabled, so users don't get "new QGroundControl version" prompts |
 
+## Flynus UI (v2 — "Flynus Dark")
+
+- **Font:** Barlow (SIL Open Font License 1.1, see `res/fonts/OFL.txt`), renamed internally to "Open Sans" so QGC picks it up everywhere; loaded in `CustomPlugin::init()`.
+- **Theme:** dark by default; palette in `CustomPlugin::paletteOverride()`.
+- **Fly View:** centered flight-mode pill on a transparent top bar; left panel (status, flight-time ring, restyled battery/GPS/RC/telemetry); round Takeoff/RTH/Land/Pause buttons on the right; compact telemetry + compass at the bottom; tile buttons Plan/Setup/Analyze/Settings bottom-left and Close bottom-right; Flynus quad icon and green flight trail on the map.
+- **Configure > Radio:** one page with tabs Pairing / Channels & Mode / Calibration (stock QGC) / Check, plus an AETR mapping banner. Pairing and remote channel order need the remote firmware protocol in `docs/FlynusRemoteProtocol.md`.
+- **Waiting screen:** shown until a vehicle is connected and parameters are loaded ("Vào bản đồ" hides it until the next disconnect).
+
 ## Layout
 
 ```

@@ -11,6 +11,8 @@
     <qresource prefix="/Custom/qml/QGroundControl/FlyView">
         <file alias="FlyViewBottomRightRowLayout.qml">res/qml/FlyView/FlyViewBottomRightRowLayout.qml</file>
         <file alias="FlyViewWidgetLayer.qml">res/qml/FlyView/FlyViewWidgetLayer.qml</file>
+        <file alias="FlyViewMap.qml">res/qml/FlyView/FlyViewMap.qml</file>
+        <file alias="FlyViewToolStripActionList.qml">res/qml/FlyView/FlyViewToolStripActionList.qml</file>
     </qresource>
     <qresource prefix="/Custom/qml/QGroundControl/Toolbar">
         <file alias="FlyViewToolBar.qml">res/qml/Toolbar/FlyViewToolBar.qml</file>
@@ -18,6 +20,16 @@
     </qresource>
     <qresource prefix="/Custom/qml/QGroundControl/Controls">
         <file alias="QGCToolBarButton.qml">res/qml/Controls/QGCToolBarButton.qml</file>
+        <file alias="SettingsButton.qml">res/qml/Controls/SettingsButton.qml</file>
+        <file alias="ParameterEditor.qml">res/qml/Controls/ParameterEditor.qml</file>
+    </qresource>
+    <!-- Configure > Radio: merged page (pairing, remote channels, stock calibration, check) -->
+    <qresource prefix="/Custom/qml/QGroundControl/AutoPilotPlugins/Common">
+        <file alias="RadioComponent.qml">res/qml/AutoPilotPlugins/RadioComponent.qml</file>
+    </qresource>
+    <!-- Map vehicle icon: Flynus quad instead of the QGC arrow -->
+    <qresource prefix="/Custom/qmlimages">
+        <file alias="vehicleArrowOpaque.svg">res/Images/FlynusDrone.svg</file>
     </qresource>
     <!-- Extra brand assets available to QML as qrc:/flynus/... -->
     <qresource prefix="/flynus">
@@ -25,5 +37,24 @@
         <file alias="FlynusWordmarkWhite.svg">res/Images/FlynusWordmarkWhite.svg</file>
         <file alias="FlynusLogo.svg">res/Images/FlynusLogoFull.svg</file>
         <file alias="FlynusWordmarkTile.svg">res/Images/FlynusWordmarkTile.svg</file>
+        <file alias="icons/battery.svg">res/icons/ui/battery.svg</file>
+        <file alias="icons/gps.svg">res/icons/ui/gps.svg</file>
+        <file alias="icons/rc.svg">res/icons/ui/rc.svg</file>
+        <file alias="icons/telemetry.svg">res/icons/ui/telemetry.svg</file>
+        <file alias="icons/takeoff.svg">res/icons/ui/takeoff.svg</file>
+        <file alias="icons/rth.svg">res/icons/ui/rth.svg</file>
+        <file alias="icons/land.svg">res/icons/ui/land.svg</file>
+        <file alias="icons/pause.svg">res/icons/ui/pause.svg</file>
+        <file alias="icons/plan.svg">res/icons/ui/plan.svg</file>
+        <file alias="icons/setup.svg">res/icons/ui/setup.svg</file>
+        <file alias="icons/analyze.svg">res/icons/ui/analyze.svg</file>
+        <file alias="icons/settings.svg">res/icons/ui/settings.svg</file>
+        <file alias="icons/power.svg">res/icons/ui/power.svg</file>
+        <file alias="icons/star.svg">res/icons/ui/star.svg</file>
+        <file alias="icons/star-filled.svg">res/icons/ui/star-filled.svg</file>
+        <file alias="icons/search.svg">res/icons/ui/search.svg</file>
+        <file alias="fonts/FlynusUI-Regular.ttf">res/fonts/FlynusUI-Regular.ttf</file>
+        <file alias="fonts/FlynusUI-SemiBold.ttf">res/fonts/FlynusUI-SemiBold.ttf</file>
+        <file alias="fonts/FlynusUI-Bold.ttf">res/fonts/FlynusUI-Bold.ttf</file>
     </qresource>
 </RCC>
