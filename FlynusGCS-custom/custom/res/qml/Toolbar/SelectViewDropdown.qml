@@ -5,35 +5,15 @@ import QtQuick.Layouts
 import QGroundControl
 import QGroundControl.Controls
 
-// The logo menu contains Close and the app version.
+// App version and the existing advanced-mode gesture.
 ToolIndicatorPage {
     id: root
-
-    property real _toolButtonHeight: ScreenTools.defaultFontPixelHeight * 3
 
     contentComponent: Component {
         GridLayout {
             columns: 1
             columnSpacing: ScreenTools.defaultFontPixelWidth
             rowSpacing: columnSpacing
-
-            SubMenuButton {
-                id: closeButton
-                objectName: "toolbar_viewClose"
-                implicitHeight: root._toolButtonHeight
-                Layout.fillWidth: true
-                text: qsTr("Close")
-                imageResource: "qrc:/flynus/icons/power.svg"
-                onClicked: {
-                    if (mainWindow.allowViewSwitch()) {
-                        mainWindow.closeIndicatorDrawer()
-                        // Route through the window close handler so the unsaved
-                        // mission / pending parameter / active connection checks
-                        // run, matching the desktop window-close behavior.
-                        mainWindow.close()
-                    }
-                }
-            }
 
             ColumnLayout {
                 id: versionColumnLayout

@@ -17,7 +17,6 @@ Button {
     checkable:          false
 
     property bool logo: false
-    property bool showPageNavigation: true
 
     property real _horizontalMargin: ScreenTools.defaultFontPixelWidth
 
@@ -50,26 +49,29 @@ Button {
         }
 
         contentItem: Item {
-            implicitWidth: tab.compact ? glyphImage.width : caption.implicitWidth
-            implicitHeight: Math.max(glyphImage.height, caption.implicitHeight)
+            implicitWidth: tabContent.implicitWidth
+            implicitHeight: tabContent.implicitHeight
 
-            QGCColoredImage {
-                id: glyphImage
+            Row {
+                id: tabContent
                 anchors.centerIn: parent
-                visible: tab.compact
-                width: ScreenTools.defaultFontPixelHeight * 1.2
-                height: width
-                source: tab.glyph
-                color: tab.selected ? qgcPal.colorGreen : qgcPal.buttonText
-            }
+                spacing: ScreenTools.defaultFontPixelWidth * 0.55
 
-            QGCLabel {
-                id: caption
-                anchors.centerIn: parent
-                visible: !tab.compact
-                text: tab.text
-                font.bold: tab.selected
-                color: tab.selected ? qgcPal.colorGreen : qgcPal.buttonText
+                QGCColoredImage {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: ScreenTools.defaultFontPixelHeight * 1.2
+                    height: width
+                    source: tab.glyph
+                    color: tab.selected ? qgcPal.colorGreen : qgcPal.buttonText
+                }
+
+                QGCLabel {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: !tab.compact
+                    text: tab.text
+                    font.bold: tab.selected
+                    color: tab.selected ? qgcPal.colorGreen : qgcPal.buttonText
+                }
             }
         }
     }
@@ -109,14 +111,39 @@ Button {
     contentItem: Row {
         spacing:                ScreenTools.defaultFontPixelWidth
         anchors.verticalCenter: button.verticalCenter
-        // Logo buttons render the multi-color SVG natively via VectorImage; non-logo buttons
-        // tint their monochrome icon through QGCColoredImage. Plain `Row` skips visible:false items.
-        QGCVectorImage {
+        Button {
+            id:                     flyLogo
             visible:                button.logo
-            height:                 ScreenTools.defaultFontPixelHeight * 2
-            width:                  height * 2.97   // aspect ratio of FlynusWordmarkTile.svg
-            source:                 visible ? "qrc:/flynus/FlynusWordmarkTile.svg" : ""
+            height:                 ScreenTools.defaultFontPixelHeight * 2.3
+            width:                  ScreenTools.defaultFontPixelHeight * 2 * 2.97 + 4
             anchors.verticalCenter: parent.verticalCenter
+            Accessible.name:        qsTr("Fly")
+            Accessible.selected:    button.activePage === "fly"
+            ToolTip.visible:        hovered
+            ToolTip.text:           qsTr("Fly")
+
+            onClicked: {
+                if (button.activePage !== "fly" && mainWindow.allowViewSwitch()) {
+                    mainWindow.showFlyView()
+                }
+            }
+            onPressAndHold: mainWindow.showToolSelectDialog()
+
+            background: Rectangle {
+                radius: ScreenTools.defaultFontPixelWidth * 0.65
+                color: "transparent"
+                border.width: button.activePage === "fly" || flyLogo.activeFocus ? 1 : 0
+                border.color: qgcPal.colorGreen
+            }
+
+            contentItem: Item {
+                QGCVectorImage {
+                    anchors.centerIn: parent
+                    height: ScreenTools.defaultFontPixelHeight * 2
+                    width: height * 2.97
+                    source: flyLogo.visible ? "qrc:/flynus/FlynusWordmarkTile.svg" : ""
+                }
+            }
         }
         QGCColoredImage {
             visible:                !button.logo
@@ -136,21 +163,14 @@ Button {
             anchors.verticalCenter: parent.verticalCenter
         }
         Loader {
-            active: button.logo && button.showPageNavigation
+            active: button.logo
             visible: active
             anchors.verticalCenter: parent.verticalCenter
             sourceComponent: Row {
                 id: tabs
                 spacing: ScreenTools.defaultFontPixelWidth * 0.45
-                readonly property bool compact: mainWindow.width < ScreenTools.defaultFontPixelWidth * 100
+                readonly property bool compact: mainWindow.width < ScreenTools.defaultFontPixelWidth * 115
 
-                PageTab {
-                    page: "fly"
-                    text: qsTr("Fly")
-                    glyph: "qrc:/flynus/icons/settings/fly.svg"
-                    compact: tabs.compact
-                    onClicked: if (!selected && mainWindow.allowViewSwitch()) mainWindow.showFlyView()
-                }
                 PageTab {
                     page: "plan"
                     text: qsTr("Plan")

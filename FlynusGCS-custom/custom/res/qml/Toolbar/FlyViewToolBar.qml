@@ -43,11 +43,10 @@ Item {
 
     QGCFlickable {
         anchors.fill:       parent
-        contentWidth:       toolBarLayout.width
+        contentWidth:       leftPanel.width
         flickableDirection: Flickable.HorizontalFlick
 
         Row {
-            id:         toolBarLayout
             height:     parent.height
             spacing:    0
 
@@ -72,7 +71,6 @@ Item {
                             Layout.fillHeight:  true
                             icon.source:        "/res/QGCLogoFull.svg"
                             logo:               true
-                            showPageNavigation: !guidedActionConfirm.visible
                             onClicked:          mainWindow.showToolSelectDialog()
                         }
 
@@ -95,38 +93,28 @@ Item {
 
                 }
             }
-            Item {
-                id:     centerPanel
-                // center panel takes up all remaining space in toolbar between left and right panels
-                width:  Math.max(guidedActionConfirm.visible ? guidedActionConfirm.width : 0, control.width - (leftPanel.width + rightPanel.width))
-                height: parent.height
-
-                GuidedActionConfirm {
-                    id:                         guidedActionConfirm
-                    height:                     parent.height
-                    anchors.horizontalCenter:   parent.horizontalCenter
-                    guidedController:           control._guidedController
-                    guidedValueSlider:          control.guidedValueSlider
-                    messageDisplay:             guidedActionMessageDisplay
-                }
-            }
-
-            // Indicators moved to the left side panel
-            Item {
-                id:     rightPanel
-                width:  0
-                height: parent.height
-            }
         }
     }
 
-    // The guided action message display is outside of the GuidedActionConfirm control so that it doesn't end up as
-    // part of the Flickable
+    GuidedActionConfirm {
+        id:                         guidedActionConfirm
+        height:                     control.height
+        // Use the next line when the confirmation cannot fit beside the navigation.
+        readonly property bool fitsBesideNavigation: leftPanel.width + width + control._leftRightMargin <= control.width
+        x:                          fitsBesideNavigation
+            ? leftPanel.width + (control.width - leftPanel.width - width) / 2
+            : Math.max(0, (control.width - width) / 2)
+        y:                          fitsBesideNavigation ? 0 : control.height
+        guidedController:           control._guidedController
+        guidedValueSlider:          control.guidedValueSlider
+        messageDisplay:             guidedActionMessageDisplay
+    }
+
     Rectangle {
         id:                         guidedActionMessageDisplay
-        anchors.top:                control.bottom
+        anchors.top:                guidedActionConfirm.bottom
         anchors.topMargin:          _margins
-        x:                          control.mapFromItem(guidedActionConfirm.parent, guidedActionConfirm.x, 0).x + (guidedActionConfirm.width - guidedActionMessageDisplay.width) / 2
+        x:                          guidedActionConfirm.x + (guidedActionConfirm.width - width) / 2
         width:                      messageLabel.contentWidth + (_margins * 2)
         height:                     messageLabel.contentHeight + (_margins * 2)
         color:                      qgcPal.windowTransparent
