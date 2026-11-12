@@ -5,8 +5,7 @@ import QtQuick.Layouts
 import QGroundControl
 import QGroundControl.Controls
 
-// Flynus GCS override of the stock logo menu: same items as QGC,
-// only the Settings icon is changed from the QGC "Q" logo to a gear.
+// The logo menu contains Close and the app version.
 ToolIndicatorPage {
     id: root
 
@@ -14,83 +13,9 @@ ToolIndicatorPage {
 
     contentComponent: Component {
         GridLayout {
-            columns: 2
+            columns: 1
             columnSpacing: ScreenTools.defaultFontPixelWidth
             rowSpacing: columnSpacing
-
-            SubMenuButton {
-                objectName: "toolbar_viewFly"
-                implicitHeight: root._toolButtonHeight
-                Layout.fillWidth: true
-                text: qsTr("Fly")
-                imageResource: "/res/FlyingPaperPlane.svg"
-                onClicked: {
-                    if (mainWindow.allowViewSwitch()) {
-                        mainWindow.closeIndicatorDrawer()
-                        mainWindow.showFlyView()
-                    }
-                }
-            }
-
-            SubMenuButton {
-                objectName: "toolbar_viewPlan"
-                implicitHeight: root._toolButtonHeight
-                Layout.fillWidth: true
-                text: qsTr("Plan")
-                imageResource: "/qmlimages/Plan.svg"
-                onClicked: {
-                    if (mainWindow.allowViewSwitch()) {
-                        mainWindow.closeIndicatorDrawer()
-                        mainWindow.showPlanView()
-                    }
-                }
-            }
-
-            SubMenuButton {
-                objectName: "toolbar_viewAnalyze"
-                implicitHeight: root._toolButtonHeight
-                Layout.fillWidth: true
-                text: qsTr("Analyze")
-                imageResource: "/qmlimages/Analyze.svg"
-                visible: QGroundControl.corePlugin.showAdvancedUI
-                onClicked: {
-                    if (mainWindow.allowViewSwitch()) {
-                        mainWindow.closeIndicatorDrawer()
-                        mainWindow.showAnalyzeTool()
-                    }
-                }
-            }
-
-            SubMenuButton {
-                id: setupButton
-                objectName: "toolbar_viewConfigure"
-                implicitHeight: root._toolButtonHeight
-                Layout.fillWidth: true
-                text: qsTr("Configure")
-                imageResource: "/res/GearWithPaperPlane.svg"
-                onClicked: {
-                    if (mainWindow.allowViewSwitch()) {
-                        mainWindow.closeIndicatorDrawer()
-                        mainWindow.showVehicleConfig()
-                    }
-                }
-            }
-
-            SubMenuButton {
-                id: settingsButton
-                objectName: "toolbar_viewSettings"
-                implicitHeight: root._toolButtonHeight
-                Layout.fillWidth: true
-                text: qsTr("Settings")
-                imageResource: "/qmlimages/Gears.svg"
-                visible: !QGroundControl.corePlugin.options.combineSettingsAndSetup
-                onClicked: {
-                    if (mainWindow.allowViewSwitch()) {
-                        mainWindow.closeIndicatorDrawer()
-                        mainWindow.showSettingsTool()
-                    }
-                }
-            }
 
             SubMenuButton {
                 id: closeButton
@@ -98,7 +23,7 @@ ToolIndicatorPage {
                 implicitHeight: root._toolButtonHeight
                 Layout.fillWidth: true
                 text: qsTr("Close")
-                imageResource: "/res/OpenDoor.svg"
+                imageResource: "qrc:/flynus/icons/power.svg"
                 onClicked: {
                     if (mainWindow.allowViewSwitch()) {
                         mainWindow.closeIndicatorDrawer()
@@ -113,7 +38,6 @@ ToolIndicatorPage {
             ColumnLayout {
                 id: versionColumnLayout
                 Layout.fillWidth: true
-                Layout.columnSpan: 2
                 spacing: 0
 
                 QGCLabel {

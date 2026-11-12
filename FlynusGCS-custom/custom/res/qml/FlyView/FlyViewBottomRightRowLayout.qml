@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import QGroundControl
 import QGroundControl.Controls
 import QGroundControl.FlyView
+import QGroundControl.Toolbar
 
 // Flynus GCS override of the stock FlyViewBottomRightRowLayout.qml.
 // Bottom-center telemetry in a compact "label + big number" style:
@@ -22,7 +23,7 @@ Item {
     property var _vehicle: QGroundControl.multiVehicleManager.activeVehicle
 
     width:  0
-    height: telemetryPanel.height
+    height: telemetryPanel.height + (modePill.visible ? modePill.height + modePill.anchors.bottomMargin : 0)
 
     component TelemetryValue: Row {
         id:         cell
@@ -67,6 +68,53 @@ Item {
         border.width:   1
         border.color:   Qt.rgba(1, 1, 1, 0.10)
 
+        // Keep the stock flight-mode control centered above the compass.
+        Rectangle {
+            id:                         modePill
+            anchors.bottom:             parent.top
+            anchors.bottomMargin:       ScreenTools.defaultFontPixelHeight * 0.25
+            height:                     ScreenTools.toolbarHeight * 0.66
+            width:                      modePillRow.width + height
+            x:                          compass.visible ? panelRow.x + compass.x + (compass.width - width) / 2 : (parent.width - width) / 2
+            radius:                     height / 2
+            color:                      Qt.rgba(0.055, 0.067, 0.059, 0.85)
+            border.width:               1
+            border.color:               _armed ? "#2FBF4A" : Qt.rgba(1, 1, 1, 0.25)
+            visible:                    !!_root._vehicle && !QGroundControl.videoManager.fullScreen
+
+            property bool _armed: _root._vehicle ? _root._vehicle.armed : false
+
+            RowLayout {
+                id:                         modePillRow
+                anchors.centerIn:           parent
+                height:                     parent.height
+                spacing:                    ScreenTools.defaultFontPixelWidth
+
+                Rectangle {
+                    Layout.alignment:       Qt.AlignVCenter
+                    implicitWidth:          armedLabel.contentWidth + ScreenTools.defaultFontPixelWidth * 1.6
+                    implicitHeight:         armedLabel.contentHeight + ScreenTools.defaultFontPixelHeight * 0.2
+                    radius:                 height / 2
+                    color:                  modePill._armed ? "#2FBF4A" : "#3A403C"
+
+                    QGCLabel {
+                        id:                 armedLabel
+                        anchors.centerIn:   parent
+                        text:               modePill._armed ? qsTr("ARMED") : qsTr("DISARMED")
+                        font.pointSize:     ScreenTools.smallFontPointSize
+                        font.bold:          true
+                        font.letterSpacing: 1
+                        color:              modePill._armed ? "#0B0D0C" : "#DDDDDD"
+                    }
+                }
+
+                FlightModeIndicator {
+                    objectName:         "toolbar_flightModeIndicator"
+                    Layout.fillHeight:  true
+                }
+            }
+        }
+
         RowLayout {
             id:                 panelRow
             anchors.centerIn:   parent
@@ -84,6 +132,7 @@ Item {
             }
 
             FlyViewInstrumentPanel {
+                id:                 compass
                 Layout.alignment:   Qt.AlignVCenter
                 visible:            QGroundControl.corePlugin.options.flyView.showInstrumentPanel && _showSingleVehicleUI
             }

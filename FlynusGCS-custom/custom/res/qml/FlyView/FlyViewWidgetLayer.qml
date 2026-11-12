@@ -46,14 +46,14 @@ Item {
         id:                     _totalToolInsets
         leftEdgeTopInset:       Math.max(toolStrip.leftEdgeTopInset, statusPanel.leftEdgeTopInset)
         leftEdgeCenterInset:    toolStrip.leftEdgeCenterInset
-        leftEdgeBottomInset:    Math.max(navPanelLeft.visible ? navPanelLeft.width : 0, virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.leftEdgeBottomInset : parentToolInsets.leftEdgeBottomInset)
+        leftEdgeBottomInset:    virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.leftEdgeBottomInset : parentToolInsets.leftEdgeBottomInset
         rightEdgeTopInset:      topRightPanel.rightEdgeTopInset
-        rightEdgeCenterInset:   Math.max(topRightPanel.rightEdgeCenterInset, actionColumn.rightEdgeCenterInset)
+        rightEdgeCenterInset:   Math.max(topRightPanel.rightEdgeCenterInset, actionViewport.rightEdgeCenterInset)
         rightEdgeBottomInset:   Math.max(bottomRightRowLayout.rightEdgeBottomInset, navPanelRight.visible ? navPanelRight.width + _layoutMargin : 0)
         topEdgeLeftInset:       toolStrip.topEdgeLeftInset
         topEdgeCenterInset:     mapScale.topEdgeCenterInset
         topEdgeRightInset:      topRightPanel.topEdgeRightInset
-        bottomEdgeLeftInset:    Math.max(navPanelLeft.visible ? navPanelLeft.height + navPanelLeft.anchors.bottomMargin : 0, virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.bottomEdgeLeftInset : parentToolInsets.bottomEdgeLeftInset)
+        bottomEdgeLeftInset:    virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.bottomEdgeLeftInset : parentToolInsets.bottomEdgeLeftInset
         bottomEdgeCenterInset:  bottomRightRowLayout.bottomEdgeCenterInset
         bottomEdgeRightInset:   Math.max(navPanelRight.visible ? navPanelRight.height + _layoutMargin : 0, virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.bottomEdgeRightInset : bottomRightRowLayout.bottomEdgeRightInset)
     }
@@ -573,45 +573,6 @@ Item {
         }
     }
 
-    // ---- Flynus: navigation (bottom-left) and Close (bottom-right) -----------
-    // (The logo menu still has all items for quick switching from any screen.)
-    Row {
-        id:                     navPanelLeft
-        anchors.left:           parent.left
-        anchors.bottom:         parent.bottom
-        anchors.bottomMargin:   parentToolInsets.bottomEdgeLeftInset
-        spacing:                _toolsMargin
-        z:                      QGroundControl.zOrderWidgets
-        visible:                !QGroundControl.videoManager.fullScreen
-
-        FlynusTileButton {
-            objectName: "flynus_navPlan"
-            text:       qsTr("PLAN")
-            iconSource: "qrc:/flynus/icons/plan.svg"
-            onClicked:  if (mainWindow.allowViewSwitch()) mainWindow.showPlanView()
-        }
-        FlynusTileButton {
-            objectName: "flynus_navConfigure"
-            text:       qsTr("SETUP")
-            iconSource: "qrc:/flynus/icons/setup.svg"
-            onClicked:  if (mainWindow.allowViewSwitch()) mainWindow.showVehicleConfig()
-        }
-        FlynusTileButton {
-            objectName: "flynus_navAnalyze"
-            text:       qsTr("ANALYZE")
-            iconSource: "qrc:/flynus/icons/analyze.svg"
-            visible:    QGroundControl.corePlugin.showAdvancedUI
-            onClicked:  if (mainWindow.allowViewSwitch()) mainWindow.showAnalyzeTool()
-        }
-        FlynusTileButton {
-            objectName: "flynus_navSettings"
-            text:       qsTr("SETTINGS")
-            iconSource: "qrc:/flynus/icons/settings.svg"
-            visible:    !QGroundControl.corePlugin.options.combineSettingsAndSetup
-            onClicked:  if (mainWindow.allowViewSwitch()) mainWindow.showSettingsTool()
-        }
-    }
-
     FlynusTileButton {
         id:             navPanelRight
         objectName:     "flynus_navClose"
@@ -629,43 +590,63 @@ Item {
 
     // ---- Flynus: large round action buttons (right edge) ---------------------
     // They open the same guided-action confirmation (slider) as the stock tool strip.
-    Column {
-        id:                     actionColumn
+    Flickable {
+        id:                     actionViewport
         anchors.right:          parent.right
-        anchors.verticalCenter: parent.verticalCenter
-        spacing:                ScreenTools.defaultFontPixelHeight * 0.8
+        width:                  actionColumn.implicitWidth
+        height:                 Math.min(contentHeight, Math.max(0, _bottomLimit - _topLimit))
+        y:                      Math.max(_topLimit, Math.min((parent.height - height) / 2, _bottomLimit - height))
+        contentWidth:           width
+        contentHeight:          actionColumn.implicitHeight
+        clip:                   height < contentHeight
+        interactive:            clip
+        boundsBehavior:         Flickable.StopAtBounds
+        flickableDirection:     Flickable.VerticalFlick
         z:                      QGroundControl.zOrderWidgets
         visible:                !QGroundControl.videoManager.fullScreen && _activeVehicle
 
-        property real rightEdgeCenterInset: visible ? width + _layoutMargin : 0
+        // Keep the camera controls and the bottom Close button clear.
+        readonly property real _cameraBottom: topRightPanel.visible
+            ? topRightPanel.y + topRightPanel.height
+            : topRightColumnLayout.visible && topRightColumnLayout.childrenRect.height > 0
+                ? topRightColumnLayout.y + topRightColumnLayout.childrenRect.y + topRightColumnLayout.childrenRect.height
+                : 0
+        readonly property real _topLimit: _cameraBottom > 0 ? _cameraBottom + _layoutSpacing : 0
+        readonly property real _bottomLimit: navPanelRight.visible ? navPanelRight.y - _layoutSpacing : parent.height
+        readonly property real rightEdgeCenterInset: visible && height > 0 ? width + _layoutMargin : 0
 
-        FlynusActionButton {
-            text:       _guidedController.takeoffTitle.toUpperCase()
-            iconSource: "qrc:/flynus/icons/takeoff.svg"
-            primary:    true
-            visible:    _guidedController.showTakeoff || !_guidedController.showLand
-            enabled:    _guidedController.showTakeoff
-            onClicked:  { _guidedController.closeAll(); _guidedController.confirmAction(_guidedController.actionTakeoff) }
-        }
-        FlynusActionButton {
-            text:       qsTr("RTH")
-            iconSource: "qrc:/flynus/icons/rth.svg"
-            enabled:    _guidedController.showRTL
-            onClicked:  { _guidedController.closeAll(); _guidedController.confirmAction(_guidedController.actionRTL) }
-        }
-        FlynusActionButton {
-            text:       _guidedController.landTitle.toUpperCase()
-            iconSource: "qrc:/flynus/icons/land.svg"
-            visible:    _guidedController.showLand || !_guidedController.showTakeoff
-            enabled:    _guidedController.showLand
-            onClicked:  { _guidedController.closeAll(); _guidedController.confirmAction(_guidedController.actionLand) }
-        }
-        FlynusActionButton {
-            text:       _guidedController.pauseTitle.toUpperCase()
-            iconSource: "qrc:/flynus/icons/pause.svg"
-            iconColor:  "#F5B700"
-            enabled:    _guidedController.showPause
-            onClicked:  { _guidedController.closeAll(); _guidedController.confirmAction(_guidedController.actionPause) }
+        Column {
+            id:                 actionColumn
+            spacing:            ScreenTools.defaultFontPixelHeight * 0.8
+
+            FlynusActionButton {
+                text:       _guidedController.takeoffTitle.toUpperCase()
+                iconSource: "qrc:/flynus/icons/takeoff.svg"
+                primary:    true
+                visible:    _guidedController.showTakeoff || !_guidedController.showLand
+                enabled:    _guidedController.showTakeoff
+                onClicked:  { _guidedController.closeAll(); _guidedController.confirmAction(_guidedController.actionTakeoff) }
+            }
+            FlynusActionButton {
+                text:       qsTr("RTH")
+                iconSource: "qrc:/flynus/icons/rth.svg"
+                enabled:    _guidedController.showRTL
+                onClicked:  { _guidedController.closeAll(); _guidedController.confirmAction(_guidedController.actionRTL) }
+            }
+            FlynusActionButton {
+                text:       _guidedController.landTitle.toUpperCase()
+                iconSource: "qrc:/flynus/icons/land.svg"
+                visible:    _guidedController.showLand || !_guidedController.showTakeoff
+                enabled:    _guidedController.showLand
+                onClicked:  { _guidedController.closeAll(); _guidedController.confirmAction(_guidedController.actionLand) }
+            }
+            FlynusActionButton {
+                text:       _guidedController.pauseTitle.toUpperCase()
+                iconSource: "qrc:/flynus/icons/pause.svg"
+                iconColor:  "#F5B700"
+                enabled:    _guidedController.showPause
+                onClicked:  { _guidedController.closeAll(); _guidedController.confirmAction(_guidedController.actionPause) }
+            }
         }
     }
 
@@ -675,7 +656,7 @@ Item {
         anchors.top:            statusPanel.bottom
         anchors.topMargin:      _toolsMargin
         z:                      QGroundControl.zOrderWidgets
-        maxHeight:              parent.height - y - Math.max(parentToolInsets.bottomEdgeLeftInset, navPanelLeft.visible ? navPanelLeft.height + navPanelLeft.anchors.bottomMargin : 0) - _toolsMargin
+        maxHeight:              parent.height - y - parentToolInsets.bottomEdgeLeftInset - _toolsMargin
         visible:                !QGroundControl.videoManager.fullScreen
 
         onDisplayPreFlightChecklist: {
@@ -734,6 +715,15 @@ Item {
     // until the next disconnect. The top toolbar (logo menu) stays usable above it.
     property bool _connectScreenDismissed: false
     property bool _vehicleReady: _activeVehicle ? _activeVehicle.parameterManager.parametersReady : false
+
+    // Restore QGC's PiP visibility binding when the waiting screen closes.
+    Binding {
+        target:         _pipView
+        property:       "visible"
+        value:          false
+        when:           connectScreen.visible
+        restoreMode:    Binding.RestoreBindingOrValue
+    }
 
     Rectangle {
         id:                 connectScreen

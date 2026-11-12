@@ -21,6 +21,36 @@ Button {
     property bool expandable: false
     property bool expanded:   false
 
+    // Application Settings sets this object name from the untranslated page key.
+    readonly property string settingsIconPrefix: "qrc:/flynus/icons/settings/"
+    readonly property bool isApplicationSettingsPage: objectName.startsWith("settingsButton_")
+    readonly property var settingsIcons: ({
+        "general": "general",
+        "flyview": "fly",
+        "3dview": "3d",
+        "planview": "plan",
+        "adsbserver": "adsb",
+        "commlinks": "links",
+        "applogging": "logging",
+        "applogviewer": "log-viewer",
+        "maps": "maps",
+        "ntriprtk": "rtk",
+        "ntrip": "rtk",
+        "px4logtransfer": "transfer",
+        "remoteid": "remote-id",
+        "telemetry": "telemetry",
+        "video": "video",
+        "help": "help"
+    })
+    readonly property url menuIconSource: {
+        if (!isApplicationSettingsPage) {
+            return icon.source
+        }
+
+        const pageKey = objectName.slice("settingsButton_".length).toLowerCase().replace(/[^a-z0-9]/g, "")
+        return settingsIconPrefix + (settingsIcons[pageKey] ?? "general") + ".svg"
+    }
+
     signal toggleExpand()
 
     QGCPalette {
@@ -50,7 +80,7 @@ Button {
         spacing: ScreenTools.defaultFontPixelWidth
 
         QGCColoredImage {
-            source: control.icon.source
+            source: control.menuIconSource
             color:  control.icon.color
             width:  ScreenTools.defaultFontPixelHeight * 1.2
             height: ScreenTools.defaultFontPixelHeight * 1.2
@@ -67,7 +97,7 @@ Button {
 
         QGCColoredImage {
             visible:    control.expandable
-            source:     "/InstrumentValueIcons/cheveron-right.svg"
+            source:     control.isApplicationSettingsPage ? control.settingsIconPrefix + "chevron.svg" : "/InstrumentValueIcons/cheveron-right.svg"
             color:      control.textColor
             width:      ScreenTools.defaultFontPixelHeight * 0.75
             height:     width

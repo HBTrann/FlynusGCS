@@ -9,7 +9,7 @@ import QGroundControl.FlyView
 import QGroundControl.Toolbar
 
 // Flynus GCS override of the stock FlyViewToolBar.qml:
-// the top bar shows only the logo (menu) and a centered flight-mode pill on a
+// the top bar shows the logo (menu) and guided action confirmations on a
 // transparent gradient. Status, battery, GPS,
 // RC/telemetry signal and the other indicators live in the left side panel
 // (see custom/res/qml/FlyView/FlyViewCustomLayer.qml).
@@ -72,6 +72,7 @@ Item {
                             Layout.fillHeight:  true
                             icon.source:        "/res/QGCLogoFull.svg"
                             logo:               true
+                            showPageNavigation: !guidedActionConfirm.visible
                             onClicked:          mainWindow.showToolSelectDialog()
                         }
 
@@ -99,52 +100,6 @@ Item {
                 // center panel takes up all remaining space in toolbar between left and right panels
                 width:  Math.max(guidedActionConfirm.visible ? guidedActionConfirm.width : 0, control.width - (leftPanel.width + rightPanel.width))
                 height: parent.height
-
-                // Flight mode "pill" centered in the toolbar (hidden while a guided action is being confirmed)
-                Rectangle {
-                    id:                         modePill
-                    anchors.horizontalCenter:   parent.horizontalCenter
-                    anchors.verticalCenter:     parent.verticalCenter
-                    height:                     parent.height * 0.66
-                    width:                      modePillRow.width + height
-                    radius:                     height / 2
-                    color:                      Qt.rgba(0.055, 0.067, 0.059, 0.85)
-                    border.width:               1
-                    border.color:               _armed ? "#2FBF4A" : Qt.rgba(1, 1, 1, 0.25)
-                    visible:                    _activeVehicle && !guidedActionConfirm.visible
-
-                    property bool _armed: _activeVehicle ? _activeVehicle.armed : false
-
-                    RowLayout {
-                        id:                         modePillRow
-                        anchors.centerIn:           parent
-                        height:                     parent.height
-                        spacing:                    ScreenTools.defaultFontPixelWidth
-
-                        Rectangle {
-                            Layout.alignment:       Qt.AlignVCenter
-                            implicitWidth:          armedLabel.contentWidth + ScreenTools.defaultFontPixelWidth * 1.6
-                            implicitHeight:         armedLabel.contentHeight + ScreenTools.defaultFontPixelHeight * 0.2
-                            radius:                 height / 2
-                            color:                  modePill._armed ? "#2FBF4A" : "#3A403C"
-
-                            QGCLabel {
-                                id:                 armedLabel
-                                anchors.centerIn:   parent
-                                text:               modePill._armed ? qsTr("ARMED") : qsTr("DISARMED")
-                                font.pointSize:     ScreenTools.smallFontPointSize
-                                font.bold:          true
-                                font.letterSpacing: 1
-                                color:              modePill._armed ? "#0B0D0C" : "#DDDDDD"
-                            }
-                        }
-
-                        FlightModeIndicator {
-                            objectName:         "toolbar_flightModeIndicator"
-                            Layout.fillHeight:  true
-                        }
-                    }
-                }
 
                 GuidedActionConfirm {
                     id:                         guidedActionConfirm
